@@ -105,6 +105,7 @@ def UpdateQueue():
 			CheckForFavoriteRequest(post)
 		except tweepy.TweepError as e:
 			logger.error("A problem occured while retweeting: {0}".format(e))
+			post_list.pop(0)
 
 # Check if a post requires you to follow the user.
 # Be careful with this function! Twitter may write ban your application

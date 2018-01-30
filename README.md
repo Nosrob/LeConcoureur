@@ -3,8 +3,6 @@ Will poll for Retweet Contests and retweet them. Inspired by http://www.hscott.n
 
 A more acceptable use of this kind of app may involve using to search for philanthropic causes requesting retweets, and retweet less often so as not to seem spammy.
 
-[![Build Status](https://travis-ci.org/ModusVivendi/twitter-contest.svg?branch=master)](https://travis-ci.org/ModusVivendi/twitter-contest)
-
 Disclaimer!
 ------------
 
@@ -18,9 +16,9 @@ You can fork this repository on GitHub as long as it links back to this original
 Prerequisites
 ------------
 
-  * TwitterAPI
+  * Tweepy
   * Python 3.4
-  
+
 Configuration
 ------------
 
@@ -30,15 +28,15 @@ Installation
 ------------
 From the command line:
 
-	pip3 install TwitterAPI && pip3 install apscheduler
-	
+	pip3 install tweepy && pip3 install apscheduler
+
 Then run:
 
 	python3 main.py
 
 Credits
 -------------
-This project was originally forked from https://github.com/kurozael/twitter-contest-bot.
+This project was originally forked from https://github.com/AuxProc/twitter-contest, itself forked from https://github.com/kurozael/twitter-contest-bot.
 
 Alternatives
 -------------

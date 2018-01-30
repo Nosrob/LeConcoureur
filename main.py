@@ -37,7 +37,6 @@ def CheckBlockedUsers():
         logger.warn("Update blocked users skipped! Queue: {0} Ratelimit: {1}/{2} ({3}%)".format(len(post_list), ratelimit_search[1], ratelimit_search[0], ratelimit_search[2]))
 
 def CheckRateLimit():
-
     global ratelimit
     global ratelimit_search
 
@@ -71,14 +70,12 @@ def CheckRateLimit():
 
 def ClearQueue():
     post_list_length = len(post_list)
-
     if post_list_length > Config.min_posts_queue:
         del post_list[:post_list_length - Config.min_posts_queue]
         logger.info("===THE QUEUE HAS BEEN CLEARED===")
 
 # Update the Retweet queue (this prevents too many retweets happening at once.)
 def UpdateQueue():
-
     logger.info("=== CHECKING RETWEET QUEUE ===")
     logger.info("Queue length: {}".format(len(post_list)))
 
@@ -90,15 +87,57 @@ def UpdateQueue():
         post = post_list[0]
         logger.info("Retweeting: {0} {1}".format(post.id, post.text.encode('utf8')))
 
-        if r.user.id in ignore_list:
+        if post.user.id in ignore_list:
         	post_list.pop(0)
         	logger.info("Blocked user's tweet skipped")
         	return
 
-        # r = api.retweet(post.id)
+        r = api.retweet(post.id)
         post_list.pop(0)
         CheckForFollowRequest(post)
-        #CheckForFavoriteRequest(post)
+        CheckForFavoriteRequest(post)
+
+# Check if a post requires you to follow the user.
+# Be careful with this function! Twitter may write ban your application
+# for following too aggressively
+def CheckForFollowRequest(item):
+	text = item.text
+	screen_name = item.user.screen_name
+
+	if hasattr(item, 'retweeted_status'):
+		text = item.retweeted_status.text
+		screen_name = item.retweeted_status.user.screen_name
+
+	if any(x in text.lower() for x in Config.follow_keywords):
+		RemoveOldestFollow()
+		logger.info("Follow: {0}".format(screen_name))
+		api.create_friendship(screen_name)
+
+# FIFO - Every new follow should result in the oldest follow being removed.
+def RemoveOldestFollow():
+    friends = list()
+    for id in api.friends_ids():
+        friends.append(id)
+
+    oldest_friend = friends[-1]
+
+    if len(friends) > Config.max_follows:
+        api.destroy_friendship(oldest_friend)
+        logger.info('Unfollowed: {0}'.format(oldest_friend))
+        return
+    logger.info("No friends unfollowed")
+
+def CheckForFavoriteRequest(item):
+	text = item.text
+	id = item.id
+
+	if hasattr(item, 'retweeted_status'):
+		text = item.retweeted_status.text
+		id = item.retweeted_status.id
+
+	if any(x in text.lower() for x in Config.fav_keywords):
+		api.create_favorite(id)
+		logger.info("Favorite: {0}".format(id))
 
 # Schedule random times over the course of the day to call UpdateQueue,
 # giving the application the appearance of manual interaction.
@@ -129,6 +168,16 @@ def RandomTimes():
 	    else:
 	        scheduler.add_job(UpdateQueue, 'date', run_date=atime)
 	        logger.info("[{}] - added task at {}".format(datetime.now(), atime))
+
+# Check list of blocked users and add to ignore list
+def CheckBlockedUsers():
+    if not ratelimit_search[2] < Config.min_ratelimit_search:
+        for b in api.blocks_ids():
+            if not b in ignore_list:
+                ignore_list.append(b)
+                logger.info("Blocked user {0} added to ignore list".format(b))
+    else:
+        logger.warn("Update blocked users skipped! Queue: {0} Ratelimit: {1}/{2} ({3}%)".format(len(post_list), ratelimit_search[1], ratelimit_search[0], ratelimit_search[2]))
 
 # Scan for new contests, but not too often because of the rate limit.
 def ScanForContests():
@@ -210,13 +259,13 @@ if __name__ == '__main__':
     RandomTimes()
     ClearQueue()
     CheckRateLimit()
-    #CheckBlockedUsers()
+    CheckBlockedUsers()
     ScanForContests()
 
     scheduler.add_job(RandomTimes, 'interval', hours=24)
     scheduler.add_job(ClearQueue, 'interval', seconds=Config.clear_queue_time)
     scheduler.add_job(CheckRateLimit, 'interval', seconds=Config.rate_limit_update_time)
-    #scheduler.add_job(CheckBlockedUsers, 'interval', seconds=Config.blocked_users_update_time)
+    scheduler.add_job(CheckBlockedUsers, 'interval', seconds=Config.blocked_users_update_time)
     scheduler.add_job(ScanForContests, 'interval', seconds=Config.scan_update_time)
 
     try:

@@ -296,7 +296,6 @@ if __name__ == '__main__':
 	scheduler.add_job(CheckRateLimit, 'interval', seconds=Config.rate_limit_update_time)
 	scheduler.add_job(CheckBlockedUsers, 'interval', seconds=Config.blocked_users_update_time)
 	scheduler.add_job(ScanForContests, 'interval', seconds=Config.scan_update_time)
-	scheduler.add_job(Config.load(), 'interval', seconds=Config.config_reload_time)
 
 	try:
 		scheduler.start()
